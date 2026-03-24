@@ -1,206 +1,243 @@
 """
 app.py
 ------
-Instant Logos — a simple tool to download company logos.
+Instant Logos — download company logos in one click.
 
 Run with:  streamlit run app.py
 """
 
-import os
+import io
+import zipfile
 from dotenv import load_dotenv
 
-# Load API keys from .env file (if it exists).
 load_dotenv()
 
 import streamlit as st
-from input_parser import parse_text, parse_file, parse_image, parse_audio
+from input_parser import parse_text
 from logo_downloader import download_logos
-
-# ── CONFIGURATION ──────────────────────────────────────────────────────────────
-# Change this to any folder on your Mac where you want logos saved.
-DESTINATION_FOLDER = "~/Desktop/Logos"
 
 # ── PAGE SETUP ─────────────────────────────────────────────────────────────────
 st.set_page_config(
     page_title="Instant Logos",
-    page_icon="🏢",
+    page_icon=None,
     layout="centered",
 )
 
-# Custom CSS to keep the UI clean and minimal.
 st.markdown(
     """
     <style>
-        .block-container { max-width: 680px; padding-top: 3rem; }
-        h1 { text-align: center; font-size: 2.2rem; }
-        .subtitle { text-align: center; color: #888; margin-bottom: 2rem; }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
+
+        html, body, [class*="css"] {
+            font-family: 'Inter', sans-serif;
+        }
+
+        .block-container {
+            max-width: 640px;
+            padding-top: 4rem;
+            padding-bottom: 4rem;
+        }
+
+        /* Header */
+        .app-title {
+            font-size: 2rem;
+            font-weight: 600;
+            color: #111;
+            text-align: center;
+            letter-spacing: -0.5px;
+            margin-bottom: 0.25rem;
+        }
+        .app-subtitle {
+            font-size: 0.95rem;
+            color: #888;
+            text-align: center;
+            margin-bottom: 2.5rem;
+        }
+
+        /* Text area */
+        textarea {
+            font-family: 'Inter', sans-serif !important;
+            font-size: 0.95rem !important;
+            border-radius: 10px !important;
+            border: 1.5px solid #e5e5e5 !important;
+            background: #fafafa !important;
+            padding: 0.75rem !important;
+            color: #111 !important;
+        }
+        textarea:focus {
+            border-color: #6366f1 !important;
+            background: #fff !important;
+            box-shadow: 0 0 0 3px rgba(99,102,241,0.08) !important;
+        }
+
+        /* Primary button */
         .stButton > button {
             width: 100%;
-            background-color: #1a73e8;
+            background: #6366f1;
             color: white;
-            font-size: 1.1rem;
-            padding: 0.6rem;
-            border-radius: 8px;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.95rem;
+            font-weight: 500;
+            padding: 0.65rem 1rem;
+            border-radius: 10px;
+            border: none;
+            margin-top: 0.5rem;
+            transition: background 0.15s ease;
+        }
+        .stButton > button:hover {
+            background: #4f46e5;
             border: none;
         }
-        .stButton > button:hover { background-color: #1558b0; }
+        .stButton > button:active {
+            background: #4338ca;
+        }
+
+        /* Download buttons */
+        .stDownloadButton > button {
+            width: 100%;
+            background: transparent;
+            color: #6366f1;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.8rem;
+            font-weight: 500;
+            padding: 0.4rem 0.75rem;
+            border-radius: 8px;
+            border: 1.5px solid #e5e5e5;
+            margin-top: 0.4rem;
+            transition: all 0.15s ease;
+        }
+        .stDownloadButton > button:hover {
+            border-color: #6366f1;
+            color: #4f46e5;
+            background: rgba(99,102,241,0.04);
+        }
+
+        /* Logo card */
+        .logo-card {
+            background: #fff;
+            border: 1.5px solid #f0f0f0;
+            border-radius: 12px;
+            padding: 1.25rem 1rem 0.75rem;
+            text-align: center;
+        }
+        .logo-name {
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: #555;
+            margin-top: 0.5rem;
+        }
+        .logo-error {
+            background: #fff8f8;
+            border: 1.5px solid #fde8e8;
+            border-radius: 12px;
+            padding: 0.75rem 1rem;
+            font-size: 0.8rem;
+            color: #e53e3e;
+        }
+
+        /* ZIP section */
+        .zip-row {
+            margin-top: 1.5rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #f0f0f0;
+        }
+
+        /* Footer */
+        .app-footer {
+            text-align: center;
+            font-size: 0.75rem;
+            color: #bbb;
+            margin-top: 3rem;
+        }
+        .app-footer a { color: #bbb; text-decoration: none; }
+        .app-footer a:hover { color: #888; }
+
+        /* Hide Streamlit chrome */
+        #MainMenu { visibility: hidden; }
+        footer { visibility: hidden; }
+        header { visibility: hidden; }
     </style>
     """,
     unsafe_allow_html=True,
 )
 
 # ── HEADER ─────────────────────────────────────────────────────────────────────
-st.title("🏢 Instant Logos")
+st.markdown('<p class="app-title">Instant Logos</p>', unsafe_allow_html=True)
 st.markdown(
-    '<p class="subtitle">Type company names, upload a screenshot, or record your voice — '
-    "then download all logos in one click.</p>",
+    '<p class="app-subtitle">Type company names and download their logos instantly.</p>',
     unsafe_allow_html=True,
 )
 
-# ── INPUT SECTION ──────────────────────────────────────────────────────────────
-
-# 1. Text input (main input — works without any API keys)
+# ── INPUT ──────────────────────────────────────────────────────────────────────
 text_input = st.text_area(
-    "Type or paste company names",
-    height=140,
-    placeholder="Apple\nGoogle\nMicrosoft\n\n(plain text, bullets • – *, CSV, or numbered lists all work)",
-    help="One company per line. Comma-separated lists also work.",
+    label="Companies",
+    label_visibility="collapsed",
+    height=150,
+    placeholder="Apple\nGoogle\nMicrosoft",
 )
 
-# Divider between text input and the alternative inputs.
-st.markdown("**— or —**")
+run = st.button("Get Logos")
 
-col1, col2 = st.columns(2)
-
-# 2. File upload (screenshot or CSV)
-with col1:
-    uploaded_file = st.file_uploader(
-        "📎 Upload a screenshot or CSV",
-        type=["png", "jpg", "jpeg", "webp", "csv", "txt"],
-        help="Screenshot with company names (requires Anthropic API key) or a CSV/text file.",
-    )
-
-# 3. Voice recording
-with col2:
-    audio_input = st.audio_input(
-        "🎤 Record a voice note",
-        help="Say the company names out loud (requires OpenAI API key).",
-    )
-
-# ── DESTINATION FOLDER DISPLAY ────────────────────────────────────────────────
-expanded_destination = os.path.expanduser(DESTINATION_FOLDER)
-st.caption(f"Logos will be saved to: `{expanded_destination}`")
-
-# ── DOWNLOAD BUTTON ───────────────────────────────────────────────────────────
-st.markdown("")  # spacing
-run = st.button("▶  Download Logos")
-
-# ── PROCESSING LOGIC ──────────────────────────────────────────────────────────
+# ── PROCESSING ────────────────────────────────────────────────────────────────
 if run:
-    companies = []
-    error_messages = []
+    companies = parse_text(text_input) if text_input and text_input.strip() else []
 
-    # Step 1: Collect company names from whichever input was provided.
-
-    # Text input
-    if text_input and text_input.strip():
-        companies += parse_text(text_input)
-
-    # File upload
-    if uploaded_file is not None:
-        file_bytes = uploaded_file.read()
-        filename = uploaded_file.name.lower()
-
-        if filename.endswith((".csv", ".txt")):
-            # CSV or plain text file — no API key needed.
-            companies += parse_file(file_bytes, filename)
-        else:
-            # Image file — needs Claude API.
-            with st.spinner("Reading company names from your screenshot..."):
-                try:
-                    # Determine MIME type from extension.
-                    ext_to_mime = {
-                        ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
-                        ".png": "image/png",  ".webp": "image/webp",
-                    }
-                    ext = "." + filename.rsplit(".", 1)[-1]
-                    media_type = ext_to_mime.get(ext, "image/png")
-                    companies += parse_image(file_bytes, media_type)
-                except ValueError as e:
-                    error_messages.append(str(e))
-                except Exception as e:
-                    error_messages.append(f"Could not read screenshot: {e}")
-
-    # Voice input
-    if audio_input is not None:
-        audio_bytes = audio_input.read()
-        with st.spinner("Transcribing your voice note..."):
-            try:
-                companies += parse_audio(audio_bytes, filename="recording.wav")
-            except ValueError as e:
-                error_messages.append(str(e))
-            except Exception as e:
-                error_messages.append(f"Could not transcribe audio: {e}")
-
-    # Show any API key / input errors.
-    for msg in error_messages:
-        st.error(msg)
-
-    # De-duplicate (in case the user used multiple input methods).
-    seen = set()
-    unique_companies = []
-    for c in companies:
-        if c.strip().lower() not in seen:
-            seen.add(c.strip().lower())
-            unique_companies.append(c.strip())
-    companies = unique_companies
-
-    # Step 2: Validate we have something to work with.
     if not companies:
-        st.warning(
-            "No company names found. Please type some names, upload a file, or record a voice note."
-        )
+        st.warning("Please enter at least one company name.")
         st.stop()
 
-    st.markdown(f"**Found {len(companies)} company name(s). Downloading logos...**")
-
-    # Step 3: Download logos with a live progress bar.
-    progress_bar = st.progress(0)
-    results_placeholder = st.empty()
-    results = []
-
-    for i, company in enumerate(companies):
-        # Download one logo at a time and update the progress bar.
-        result_list = download_logos([company], DESTINATION_FOLDER)
-        results.extend(result_list)
-        progress_bar.progress((i + 1) / len(companies))
-
-    # Step 4: Show results.
-    progress_bar.empty()
+    with st.spinner("Fetching logos…"):
+        results = download_logos(companies)
 
     successes = [r for r in results if r["success"]]
     failures  = [r for r in results if not r["success"]]
 
-    # Summary line.
+    # ── LOGO GRID ─────────────────────────────────────────────────────────────
     if successes:
-        st.success(
-            f"✅ Downloaded {len(successes)}/{len(results)} logo(s) to `{expanded_destination}`"
-        )
-    if failures:
-        st.warning(f"⚠️ Could not find logos for {len(failures)} company/companies.")
+        cols = st.columns(3)
+        for i, r in enumerate(successes):
+            with cols[i % 3]:
+                st.markdown('<div class="logo-card">', unsafe_allow_html=True)
+                st.image(r["data"], use_container_width=True)
+                st.markdown(f'<p class="logo-name">{r["company"]}</p>', unsafe_allow_html=True)
+                st.markdown('</div>', unsafe_allow_html=True)
+                st.download_button(
+                    label="Download",
+                    data=r["data"],
+                    file_name=r["filename"],
+                    mime="image/png",
+                    key=f"dl_{i}",
+                )
 
-    # Per-company results.
-    with st.expander("See details", expanded=bool(failures)):
-        for r in results:
-            if r["success"]:
-                st.markdown(f"✅ **{r['company']}** → `{os.path.basename(r['message'])}`")
-            else:
-                st.markdown(f"❌ **{r['company']}** — {r['message']}")
+    # ── FAILURES ──────────────────────────────────────────────────────────────
+    if failures:
+        st.markdown("")
+        for r in failures:
+            st.markdown(
+                f'<div class="logo-error">Could not find logo for <strong>{r["company"]}</strong></div>',
+                unsafe_allow_html=True,
+            )
+            st.markdown("")
+
+    # ── ZIP DOWNLOAD ──────────────────────────────────────────────────────────
+    if len(successes) > 1:
+        st.markdown('<div class="zip-row">', unsafe_allow_html=True)
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+            for r in successes:
+                zf.writestr(r["filename"], r["data"])
+        buf.seek(0)
+        st.download_button(
+            label=f"Download all {len(successes)} logos as ZIP",
+            data=buf,
+            file_name="logos.zip",
+            mime="application/zip",
+            key="dl_zip",
+        )
+        st.markdown('</div>', unsafe_allow_html=True)
 
 # ── FOOTER ────────────────────────────────────────────────────────────────────
-st.markdown("---")
-st.caption(
-    "Logos provided by [Logo.dev](https://logo.dev). "
-    "Screenshot parsing by [Claude](https://anthropic.com). "
-    "Voice transcription by [OpenAI Whisper](https://openai.com)."
+st.markdown(
+    '<p class="app-footer">Logos by <a href="https://logo.dev" target="_blank">Logo.dev</a></p>',
+    unsafe_allow_html=True,
 )
