@@ -13,6 +13,10 @@ import requests
 # How many seconds to wait for a logo download before giving up.
 REQUEST_TIMEOUT = 10
 
+# ── LOGO.DEV API KEY ───────────────────────────────────────────────────────────
+# Get a free key at https://logo.dev — add it to your .env file as LOGO_DEV_API_KEY.
+LOGO_DEV_API_KEY = os.getenv("LOGO_DEV_API_KEY", "")
+
 # ── DOMAIN OVERRIDES ───────────────────────────────────────────────────────────
 # The automatic domain-guesser works for most companies, but some names are tricky.
 # If a company logo isn't found, add it here in lowercase:  "company name": "domain.com"
@@ -108,12 +112,12 @@ def download_logo(company_name: str, destination_folder: str) -> tuple[bool, str
         (False, error_msg) on failure
     """
     domain = company_to_domain(company_name)
-    url = f"https://logo.clearbit.com/{domain}"
+    url = f"https://img.logo.dev/{domain}?token={LOGO_DEV_API_KEY}&size=200&format=png"
 
     try:
         response = requests.get(url, timeout=REQUEST_TIMEOUT, stream=True)
     except requests.ConnectionError:
-        return False, "No internet connection. Please check your network."
+        return False, "Could not connect to logo service. Check your LOGO_DEV_API_KEY in .env."
     except requests.Timeout:
         return False, f"Timed out trying to fetch logo (domain tried: {domain})."
     except requests.RequestException as e:

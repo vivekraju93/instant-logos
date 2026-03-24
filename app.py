@@ -200,7 +200,7 @@ if run:
 # ── FOOTER ────────────────────────────────────────────────────────────────────
 st.markdown("---")
 st.caption(
-    "Logos provided by [Clearbit](https://clearbit.com). "
+    "Logos provided by [Logo.dev](https://logo.dev). "
     "Screenshot parsing by [Claude](https://anthropic.com). "
     "Voice transcription by [OpenAI Whisper](https://openai.com)."
 )
