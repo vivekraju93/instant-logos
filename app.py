@@ -18,7 +18,7 @@ from logo_downloader import download_logos
 
 # ── PAGE SETUP ─────────────────────────────────────────────────────────────────
 st.set_page_config(
-    page_title="Instant Logos",
+    page_title="Instant Logos · Deck Rooster",
     page_icon=None,
     layout="centered",
 )
@@ -26,104 +26,126 @@ st.set_page_config(
 st.markdown(
     """
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Lora:ital,wght@0,400;0,700;1,400&display=swap');
+
+        :root {
+            --dr-off-white: #fcf7ea;
+            --dr-green: #16c64f;
+            --dr-sacramento: #008440;
+            --dr-forest: #144b3e;
+            --dr-onyx: #30473f;
+            --dr-taupe: #cbc3ae;
+            --dr-classic: #f6f1e2;
+            --dr-font-heading: 'Plus Jakarta Sans', Arial, sans-serif;
+            --dr-font-body: 'Lora', Georgia, serif;
+        }
+
+        html, body, [class*="stApp"] {
+            background-color: var(--dr-off-white) !important;
+        }
 
         html, body, [class*="css"] {
-            font-family: 'Inter', sans-serif;
+            font-family: var(--dr-font-body);
+            color: var(--dr-onyx);
         }
 
         .block-container {
-            max-width: 640px;
+            max-width: 660px;
             padding-top: 4rem;
             padding-bottom: 4rem;
+            background-color: var(--dr-off-white);
         }
 
         /* Header */
         .app-title {
-            font-size: 2rem;
-            font-weight: 600;
-            color: #111;
+            font-family: var(--dr-font-heading);
+            font-size: 2.25rem;
+            font-weight: 700;
+            color: var(--dr-forest);
             text-align: center;
             letter-spacing: -0.5px;
             margin-bottom: 0.25rem;
         }
         .app-subtitle {
-            font-size: 0.95rem;
-            color: #888;
+            font-family: var(--dr-font-body);
+            font-size: 1rem;
+            color: var(--dr-onyx);
+            opacity: 0.7;
             text-align: center;
             margin-bottom: 2.5rem;
         }
 
         /* Text area */
         textarea {
-            font-family: 'Inter', sans-serif !important;
+            font-family: var(--dr-font-body) !important;
             font-size: 0.95rem !important;
             border-radius: 10px !important;
-            border: 1.5px solid #e5e5e5 !important;
-            background: #fafafa !important;
+            border: 1.5px solid var(--dr-taupe) !important;
+            background: var(--dr-classic) !important;
             padding: 0.75rem !important;
-            color: #111 !important;
+            color: var(--dr-onyx) !important;
         }
         textarea:focus {
-            border-color: #6366f1 !important;
-            background: #fff !important;
-            box-shadow: 0 0 0 3px rgba(99,102,241,0.08) !important;
+            border-color: var(--dr-green) !important;
+            background: var(--dr-off-white) !important;
+            box-shadow: 0 0 0 3px rgba(22,198,79,0.10) !important;
         }
 
         /* Primary button */
         .stButton > button {
             width: 100%;
-            background: #6366f1;
+            background: var(--dr-green);
             color: white;
-            font-family: 'Inter', sans-serif;
+            font-family: var(--dr-font-heading);
             font-size: 0.95rem;
-            font-weight: 500;
+            font-weight: 600;
             padding: 0.65rem 1rem;
-            border-radius: 10px;
+            border-radius: 24px;
             border: none;
             margin-top: 0.5rem;
             transition: background 0.15s ease;
         }
         .stButton > button:hover {
-            background: #4f46e5;
+            background: var(--dr-sacramento);
             border: none;
         }
         .stButton > button:active {
-            background: #4338ca;
+            background: var(--dr-forest);
         }
 
         /* Download buttons */
         .stDownloadButton > button {
             width: 100%;
             background: transparent;
-            color: #6366f1;
-            font-family: 'Inter', sans-serif;
+            color: var(--dr-sacramento);
+            font-family: var(--dr-font-heading);
             font-size: 0.8rem;
             font-weight: 500;
             padding: 0.4rem 0.75rem;
-            border-radius: 8px;
-            border: 1.5px solid #e5e5e5;
+            border-radius: 20px;
+            border: 1.5px solid var(--dr-taupe);
             margin-top: 0.4rem;
             transition: all 0.15s ease;
         }
         .stDownloadButton > button:hover {
-            border-color: #6366f1;
-            color: #4f46e5;
-            background: rgba(99,102,241,0.04);
+            border-color: var(--dr-green);
+            color: var(--dr-forest);
+            background: rgba(22,198,79,0.06);
         }
 
         /* Logo card */
         .logo-card {
-            background: #fff;
-            border: 1.5px solid #f0f0f0;
+            background: var(--dr-classic);
+            border: 1.5px solid var(--dr-taupe);
             border-radius: 12px;
             padding: 1.25rem 1rem 0.75rem;
             text-align: center;
         }
         .logo-name {
+            font-family: var(--dr-font-heading);
             font-size: 0.8rem;
-            font-weight: 500;
-            color: #555;
+            font-weight: 600;
+            color: var(--dr-onyx);
             margin-top: 0.5rem;
         }
         .logo-error {
@@ -131,26 +153,29 @@ st.markdown(
             border: 1.5px solid #fde8e8;
             border-radius: 12px;
             padding: 0.75rem 1rem;
-            font-size: 0.8rem;
-            color: #e53e3e;
+            font-size: 0.85rem;
+            font-family: var(--dr-font-body);
+            color: #c53030;
         }
 
         /* ZIP section */
         .zip-row {
             margin-top: 1.5rem;
             padding-top: 1.5rem;
-            border-top: 1px solid #f0f0f0;
+            border-top: 1px solid var(--dr-taupe);
         }
 
         /* Footer */
         .app-footer {
             text-align: center;
+            font-family: var(--dr-font-body);
             font-size: 0.75rem;
-            color: #bbb;
+            color: var(--dr-onyx);
+            opacity: 0.45;
             margin-top: 3rem;
         }
-        .app-footer a { color: #bbb; text-decoration: none; }
-        .app-footer a:hover { color: #888; }
+        .app-footer a { color: var(--dr-onyx); text-decoration: none; }
+        .app-footer a:hover { color: var(--dr-forest); opacity: 1; }
 
         /* Hide Streamlit chrome */
         #MainMenu { visibility: hidden; }
@@ -238,6 +263,6 @@ if run:
 
 # ── FOOTER ────────────────────────────────────────────────────────────────────
 st.markdown(
-    '<p class="app-footer">Logos by <a href="https://logo.dev" target="_blank">Logo.dev</a></p>',
+    '<p class="app-footer">A <strong>Deck Rooster</strong> tool &nbsp;·&nbsp; Logos by <a href="https://logo.dev" target="_blank">Logo.dev</a></p>',
     unsafe_allow_html=True,
 )
